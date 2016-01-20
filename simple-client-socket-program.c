@@ -91,9 +91,10 @@ void *startConnection(void *thread_data)
         }
 
         gettimeofday(&r2,NULL);
-
-        my_data->requests++;
-        my_data->response_time+=1000*(r2.tv_sec-r1.tv_sec)+(r2.tv_usec-r1.tv_usec)/1000;
+        if(n>=0){
+          my_data->requests++;
+          my_data->response_time+=1000*(r2.tv_sec-r1.tv_sec)+(r2.tv_usec-r1.tv_usec)/1000;
+        }
         printf("%f\n", (double)1000*(r2.tv_sec-r1.tv_sec)+(r2.tv_usec-r1.tv_usec)/1000);
         printf("thread %d,file %s recieved ,numbytes=%d\n",thread_id,buffer3,bytes);
 
@@ -103,7 +104,7 @@ void *startConnection(void *thread_data)
         gettimeofday(&end,NULL);
         // printf("%d %d \n",end.tv_sec, start.tv_sec );
     }
-
+    printf("thread id= %d, %d  \n",thread_id,end.tv_sec-start.tv_sec );
     return;
     
 }
@@ -183,6 +184,7 @@ int main(int argc, char *argv[])
       rc = pthread_join(threads[i], &status);
       total_requests+=td[i].requests;
       avg_response_time+=(double)td[i].response_time/td[i].requests;
+      printf("%f, %d\n",td[i].response_time,td[i].requests );
       if (rc){
          printf("Error:unable to join, %d\n", rc);
          exit(-1);
@@ -192,7 +194,7 @@ int main(int argc, char *argv[])
    }
 
    // cout << "Main: program exiting." << endl;
-   printf("total requests = %d, throughput=%f, avg_response_time=%f", total_requests,(double)total_requests/(double)experiment_time,(double)avg_response_time/(10E3*num_threads));
+   printf("total requests = %d, throughput=%f, avg_response_time=%f", total_requests,(double)total_requests/(double)experiment_time,(double)avg_response_time/(1000*num_threads));
    pthread_exit(NULL);
 
     return 0;
