@@ -9,6 +9,7 @@
 #include <signal.h>
 #include <pthread.h>
 
+// struct to pass arguments to each thread
 struct thread_data{
    int portno,experiment_time,think_time,thread_id,requests;
    double response_time;
@@ -22,6 +23,7 @@ void error(char *msg)
     exit(0);
 }
 
+// function executed by each thread
 void *startConnection(void *thread_data)
 {
     int sockfd, portno, n, experiment_time, think_time,thread_id;
@@ -41,14 +43,14 @@ void *startConnection(void *thread_data)
     thread_id = my_data->thread_id;
 
     printf("threadno = %d\n", thread_id);
-    // printf("%d %s %d %d tid=%d\n",portno,mode,experiment_time,think_time,thread_id );
 
     struct timeval start,end,r1,r2;
     gettimeofday(&start,NULL);
     gettimeofday(&end,NULL);
-    // printf("%d %d \n",end.tv_sec, start.tv_sec );
+
     while(end.tv_sec-start.tv_sec < experiment_time)
     {
+        /* get socket for making connection with server*/
         sockfd = socket(AF_INET, SOCK_STREAM, 0);
         if (sockfd < 0) 
             error("ERROR opening socket");
@@ -58,25 +60,25 @@ void *startConnection(void *thread_data)
         if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) 
             error("ERROR connecting");
 
-        
+        // zero out buffer values
         bzero(buffer3,30);bzero(buffer1,512);
         // printf("length =%d\n",strlen(buffer) );
+
+        /* set value of buffer3 which contains file name according to mode specified */
         if(strcmp(mode, "fixed")==0)
         {
             fno=0;
-            sprintf(buffer3,"get files/foo%d.txt\0",fno);
-            // printf("%s\n",(buffer3) ); 
+            sprintf(buffer3,"get files/foo%d.txt\0",fno); 
         }
         else
         {   
-            // printf("came in else\n" );
             fno = rand()%1000;
             sprintf(buffer3,"get files/foo%d.txt\0",fno);
-            // printf("%s\n",(buffer3) );
         } 
 
         gettimeofday(&r1,NULL);
 
+        /* send file request to the server */
         n = write(sockfd,buffer3,strlen(buffer3));
         printf("bytes written= %d\n",n );
         if (n < 0) 
@@ -84,13 +86,14 @@ void *startConnection(void *thread_data)
 
         
         int bytes=0;n=1;
-        // printf("before while\n");
+        /* get file data from the server till it closes connection , i.e. n==0 */
         while(n){
             n=read(sockfd,buffer1,512);
             bytes+=n;            
         }
 
         gettimeofday(&r2,NULL);
+        /*  update requests and response_time of thread after successful file transfer */
         if(n>=0){
           my_data->requests++;
           my_data->response_time+=1000*(r2.tv_sec-r1.tv_sec)+(r2.tv_usec-r1.tv_usec)/1000;
@@ -98,11 +101,12 @@ void *startConnection(void *thread_data)
         printf("%f\n", (double)1000*(r2.tv_sec-r1.tv_sec)+(r2.tv_usec-r1.tv_usec)/1000);
         printf("thread %d,file %s recieved ,numbytes=%d\n",thread_id,buffer3,bytes);
 
+        /* close the socket */
         close(sockfd);
         
+        /* wait for think_time till it is ready to send new file request */
         sleep(think_time);
         gettimeofday(&end,NULL);
-        // printf("%d %d \n",end.tv_sec, start.tv_sec );
     }
     printf("thread id= %d, %d  \n",thread_id,end.tv_sec-start.tv_sec );
     return;
@@ -134,9 +138,11 @@ int main(int argc, char *argv[])
     printf("mode = %s\n", mode );
     pthread_t threads[num_threads];
     struct thread_data td[num_threads];
+
     // Initialize and set thread joinable
    pthread_attr_init(&attr);
    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+
     /* fill in server address in sockaddr_in datastructure */
 
     server = gethostbyname(argv[1]);
@@ -153,6 +159,7 @@ int main(int argc, char *argv[])
     serv_addr.sin_port = htons(portno);
 
     int i;
+    /* initialize thread_data to pass in each thread during thread creation */
     for( i=0; i < num_threads; i++ )
     {
         td[i].requests=0;
@@ -165,7 +172,7 @@ int main(int argc, char *argv[])
         td[i].thread_id = i;
     }
 
-    
+    /* create threads */
     for( i=0; i < num_threads; i++ )
     {
           printf("main() : creating thread, %d\n", i);

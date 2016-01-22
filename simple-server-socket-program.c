@@ -62,12 +62,12 @@ int main(int argc, char *argv[])
         if (newsockfd < 0) 
             error("ERROR on accept");
 
-        // printf("%d\n", newsockfd);
-
         pid = fork();
         if (pid < 0)
             error("ERROR on fork");
         // printf("%d\n",pid );
+
+        /* new connection */
         if (pid == 0) 
         {
              close(sockfd);
@@ -106,8 +106,8 @@ int main(int argc, char *argv[])
         else 
         {
             close(newsockfd);
-            // printf("end of while\n");
             int wp =1;
+            /* reap the dead processes */
             printf("reaping start\n");
             while(wp > 0){
                 wp = waitpid(-1, NULL, WNOHANG);
